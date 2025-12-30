@@ -1,78 +1,97 @@
 # iOS Activation Tool Suite
 
-A complete, end-to-end solution for iOS device activation management. This repository contains both the client-side automation logic and the server-side infrastructure required to handle device activation payloads.
+A cross-platform (macOS/Linux) solution for iOS device activation management. This repository contains both the client-side automation logic and an optional server-side infrastructure.
 
-## Architecture Overview
+## Features
 
-The suite is divided into two core components:
+- **Cross-Platform**: Works on both macOS and Linux
+- **Two Modes**: Online (with server) or Offline (standalone)
+- **Automatic Platform Detection**: Uses optimal methods per OS
+- **Clean CLI**: Presentation-ready output with progress indicators
 
-- **Client Automation (`client/`)**: A Python-based utility that interacts directly with connected iOS devices via USB. It handles lifecycle management (reboots), system log analysis, and filesystem operations (AFC).
-
-- **Server Backend (`server/`)**: A PHP application that dynamically generates device-specific activation payloads. It serves as the central authority for handling device requests and delivering the necessary configuration databases.
-
-## Repository Structure
+## Architecture
 
 ```
 .
-├── client             # Python client application
-│   ├── activator.py   # Main automation entry point
-│   └── README.md      # Client-specific documentation
-└── server             # PHP backend infrastructure
-    ├── assets         # Device configuration storage
-    ├── public         # Web root
-    ├── SETUP.md       # Server deployment guide
-    └── templates      # SQL templates for payload generation
+├── client/
+│   └── activator.py       # Online client (requires server)
+├── offline_bypass.py      # Standalone offline client (no server needed)
+└── server/                # Optional PHP backend
+    ├── assets/            # Device configuration files
+    ├── public/            # Web root
+    └── templates/         # SQL templates
 ```
-
-
-## Prerequisites
-
-### Client-Side (macOS/Linux)
-
-- Python 3.6+
-
-- `libimobiledevice` (via Homebrew on macOS)
-
-- `pymobiledevice3` (via pip)
-
-- `curl`
-
-### Server-Side
-
-- PHP 7.4 or newer
-
-- SQLite3 extension enabled
-
-- Write permissions for cache directories
 
 ## Quick Start
-### 1. Build Release Package
 
-Use the included builder utility to generate a deployable package. This handles asset extraction and directory setup automatically.
+### Option 1: Offline Mode (Recommended for demos)
+
+No server required - everything runs locally:
 
 ```bash
-chmod +x package_builder.sh
-./package_builder.sh
+# Install dependencies
+pip install pymobiledevice3
+
+# On Linux, also install libimobiledevice
+sudo apt install libimobiledevice-utils ifuse  # Debian/Ubuntu
+# or
+sudo dnf install libimobiledevice ifuse        # Fedora
+
+# Run
+sudo python3 offline_bypass.py
 ```
 
-This will generate `release_package.tar.gz`.
+### Option 2: Online Mode (With Server)
 
-### 2. Server Deployment
-
-Deploy the contents of the `server` directory from the release package to your web host. Ensure the `public` folder is set as the document root.
-
-See [server/SETUP.md](server/SETUP.md) for detailed configuration steps.
-
-### 3. Client Configuration
-
-Update the `activator.py` script to point to your deployed server URL before running.
-
-### 4. Run the client tool
-```
+```bash
+# 1. Deploy server/ to your web host
+# 2. Update API URL in client/activator.py
+# 3. Run
 sudo python3 client/activator.py
 ```
 
+## Prerequisites
+
+### All Platforms
+- Python 3.6+
+- `pymobiledevice3` (`pip install pymobiledevice3`)
+
+### Linux
+```bash
+sudo apt install libimobiledevice-utils ifuse usbmuxd
+sudo systemctl start usbmuxd
+```
+
+### macOS
+```bash
+brew install libimobiledevice ifuse
+```
+
+## Platform Support
+
+| Feature | macOS | Linux |
+|---------|-------|-------|
+| Device Detection | Yes | Yes |
+| Syslog Collection | Yes (archive) | Yes (live) |
+| AFC Transfer (ifuse) | Yes | Yes |
+| AFC Transfer (pymobiledevice3) | Yes | Yes |
+
+## How It Works
+
+1. **Device Detection**: Connects via USB using libimobiledevice
+2. **Log Analysis**: Extracts device GUID from system logs
+3. **Payload Generation**: Creates device-specific activation databases
+4. **Deployment**: Pushes payload to device filesystem via AFC
+5. **Activation**: Device processes payload on reboot
+
+## Supported Devices
+
+See `server/assets/Maker/` for the list of supported ProductTypes (iPad11-x through iPad14-x).
 
 ## Disclaimer
 
-This tool is provided for educational and research purposes only. The authors are not responsible for any misuse of this software or damage to devices. Ensure you have authorization before performing operations on any device.
+This tool is provided for educational and research purposes only. The authors are not responsible for any misuse of this software. Ensure you have proper authorization before use.
+
+## License
+
+MIT License - See [LICENSE](LICENSE)
